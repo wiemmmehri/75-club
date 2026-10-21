@@ -9,7 +9,11 @@ export const dynamic = "force-dynamic";
 async function load(uid: number, date: string) {
   const checks = await all<{ mission_id: number }>("SELECT mission_id FROM mission_checks WHERE user_id = ? AND date = ?", [uid, date]);
   const day = await one<{ mood: string | null; note: string | null; water: number }>("SELECT mood, note, water FROM days WHERE user_id = ? AND date = ?", [uid, date]);
-  return { date, checks: checks.map((c) => Number(c.mission_id)), mood: day?.mood ?? null, note: day?.note ?? "", water: Number(day?.water ?? 0) };
+  const photos = await all<{ id: number; mission_id: number }>("SELECT id, mission_id FROM check_photos WHERE user_id = ? AND date = ? ORDER BY id", [uid, date]);
+  return {
+    date, checks: checks.map((c) => Number(c.mission_id)), mood: day?.mood ?? null, note: day?.note ?? "", water: Number(day?.water ?? 0),
+    photos: photos.map((p) => ({ id: Number(p.id), mission: Number(p.mission_id) })),
+  };
 }
 
 export async function GET(req: Request) {

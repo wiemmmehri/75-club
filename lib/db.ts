@@ -48,7 +48,28 @@ async function init(c: Client) {
       user_id INTEGER NOT NULL, text TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
     `CREATE TABLE IF NOT EXISTS spins (user_id INTEGER NOT NULL, date TEXT NOT NULL, result TEXT NOT NULL,
       PRIMARY KEY (user_id, date))`,
+    // proofs attached to a post (punishment done: photos, voice notes)
+    `CREATE TABLE IF NOT EXISTS post_media (id INTEGER PRIMARY KEY AUTOINCREMENT, post_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL, kind TEXT NOT NULL, data TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+    // photo proofs for a goal on a given day (visible by the club)
+    `CREATE TABLE IF NOT EXISTS check_photos (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+      date TEXT NOT NULL, mission_id INTEGER NOT NULL, data TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+    // body journal (private)
+    `CREATE TABLE IF NOT EXISTS body_profile (user_id INTEGER PRIMARY KEY, height REAL, goal REAL)`,
+    `CREATE TABLE IF NOT EXISTS body_logs (user_id INTEGER NOT NULL, date TEXT NOT NULL, weight REAL, waist REAL, hips REAL,
+      chest REAL, arm REAL, thigh REAL, note TEXT, PRIMARY KEY (user_id, date))`,
+    `CREATE TABLE IF NOT EXISTS body_photos (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+      date TEXT NOT NULL, pose TEXT NOT NULL DEFAULT 'front', data TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+    `CREATE INDEX IF NOT EXISTS check_photos_day ON check_photos (user_id, date)`,
+    `CREATE INDEX IF NOT EXISTS post_media_post ON post_media (post_id)`,
   ], "write");
+  // columns added after the first release: ADD COLUMN fails if it already exists, that's fine
+  for (const sql of [
+    "ALTER TABLE posts ADD COLUMN status TEXT",
+    "ALTER TABLE posts ADD COLUMN proof_text TEXT",
+    "ALTER TABLE posts ADD COLUMN done_at TEXT",
+    "ALTER TABLE comments ADD COLUMN audio TEXT",
+  ]) await c.execute(sql).catch(() => {});
   const res = await c.execute("SELECT COUNT(*) AS n FROM users");
   if (Number(res.rows[0].n) === 0) {
     for (const a of SEED_ACCOUNTS) {
@@ -87,6 +108,12 @@ export async function getStart(): Promise<string> {
   return r?.value || new Date().toISOString().slice(0, 10);
 }
 
+/** Accepts a base64 data URL of the given family (image / audio) under a size limit. */
+export function mediaData(v: unknown, family: "image" | "audio", max = 3_000_000): string | null {
+  if (typeof v !== "string" || !v.startsWith(`data:${family}/`) || !v.includes(";base64,")) return null;
+  return v.length <= max ? v : null;
+}
+
 export type UserRow = {
   id: number; email: string; password_hash: string; name: string; emoji: string; role: "admin" | "user";
   nickname: string | null; signature: string | null; era: string | null; color: string; avatar: string | null;
@@ -107,7 +134,7 @@ export function miniUser(u: UserRow) {
 }
 
 export function dataUrlToResponse(data: string | null) {
-  const m = data ? /^data:([^;]+);base64,(.*)$/.exec(data) : null;
+  const m = data ? /^data:([^;,]+)[^,]*;base64,(.*)$/.exec(data) : null;
   if (!m) return new Response("Introuvable", { status: 404 });
   return new Response(Buffer.from(m[2], "base64"), {
     headers: { "Content-Type": m[1], "Cache-Control": "private, max-age=86400" },

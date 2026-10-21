@@ -87,16 +87,18 @@ export const DAILY_LINES = [
   "Le club compte sur toi (et il te surveille un peu aussi).",
 ];
 
-export const WHEEL = [
-  { label: "Note vocale de motivation 30 s", emoji: "🎙️", color: "#FFD3E2" },
-  { label: "FREE PASS", emoji: "✨", color: "#FFF1C7" },
-  { label: "Ton meilleur conseil de la semaine", emoji: "💡", color: "#E3DAFF" },
-  { label: "Un compliment perso à chacune", emoji: "💌", color: "#C9F2E2" },
-  { label: "Tu choisis le défi collectif", emoji: "🎯", color: "#FFE2C9" },
-  { label: "FREE PASS", emoji: "💖", color: "#FFF1C7" },
-  { label: "Bilan honnête de ta semaine", emoji: "📝", color: "#FFD3E2" },
-  { label: "Playlist de motivation pour le club", emoji: "🎧", color: "#E3DAFF" },
+/** How a punishment gets proved in the Tea. */
+export type ProofKind = "none" | "photo" | "voice";
+
+/** The Punishment Wheel 🎡 — each one is on the wheel twice (8 slices). */
+const PUNISHMENTS = [
+  { key: "free", label: "FREE PASS", emoji: "✨", color: "#FFF1C7", proof: "none" as ProofKind, hint: "La chance de ta vie. Profite, ça n'arrivera pas deux fois (si, peut-être)." },
+  { key: "sadaqa", label: "5 DT de sadaqa", emoji: "🤲", color: "#C9F2E2", proof: "photo" as ProofKind, hint: "Donne 5 DT à quelqu'un qui en a besoin. Une photo (sans visage) ou un petit mot comme preuve." },
+  { key: "walk", label: "+30 min de marche", emoji: "🚶‍♀️", color: "#E3DAFF", proof: "photo" as ProofKind, hint: "30 minutes en plus de ton sport. Screenshot de ton appli de pas ou une photo de la balade." },
+  { key: "insult", label: "Insulte-toi 20 s en vocal", emoji: "🎙️", color: "#FFD3E2", proof: "voice" as ProofKind, hint: "20 secondes à te remonter les bretelles, en vocal, pour tout le club. Sois créative 😈" },
 ];
+export const WHEEL = [...PUNISHMENTS, ...PUNISHMENTS];
+export const punishmentOf = (label: string) => PUNISHMENTS.find((p) => label.includes(p.label)) || null;
 
 export const MILESTONES: Record<number, { title: string; text: string }> = {
   7: { title: "Une semaine.", text: "7 jours de discipline. L'épisode pilote est validé, la série est renouvelée." },

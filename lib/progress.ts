@@ -1,6 +1,5 @@
 import "server-only";
 import { all, getStart, one } from "./db";
-import { addDays, diffDays } from "./dates";
 import { badges, tier } from "./stats";
 import { activeMissions, loadTracking, statsFor } from "./tracking";
 
@@ -14,14 +13,9 @@ export async function progressFor(uid: number, today: string) {
   const posts = await n("SELECT COUNT(*) AS n FROM posts WHERE user_id = ? AND kind IN ('post','sos')");
   const hype = (await n("SELECT COUNT(*) AS n FROM reactions WHERE user_id = ?")) + (await n("SELECT COUNT(*) AS n FROM comments WHERE user_id = ?"));
   const stats = statsFor(t, uid, start, today);
-  // yesterday missed & wheel not spun yet?
-  const y = addDays(today, -1);
-  const spun = await one("SELECT result FROM spins WHERE user_id = ? AND date = ?", [uid, y]);
-  const missedYesterday = diffDays(start, y) >= 0 && stats.goalCount > 0 && !stats.perfectDates.includes(y) && !spun;
   return {
     start, stats, goals: activeMissions(t, uid), tier: tier(stats.perfectDays),
     days: days.map((d) => ({ ...d, water: Number(d.water) })),
     badges: badges(stats, { photos, posts, hype }),
-    missedYesterday, yesterday: y,
   };
 }

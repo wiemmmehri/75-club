@@ -10,7 +10,7 @@ import SoundToggle from "@/components/SoundToggle";
 import { useApp } from "@/components/AppContext";
 import { useToast } from "@/components/Toast";
 import { api } from "@/lib/client";
-import { dayNumber, frDate, todayStr } from "@/lib/dates";
+import { addDays, dayNumber, frDate, todayStr } from "@/lib/dates";
 
 type Row = {
   id: number; name: string; email: string; emoji: string; color: string; avatarV: number; nickname: string | null; onboarded: boolean;
@@ -25,6 +25,7 @@ export default function AdminPage() {
   const [d, setD] = useState<{ start: string; users: Row[] } | null>(null);
   const [tab, setTab] = useState<(typeof TABS)[number]>("Les girls");
   const [start, setStart] = useState("");
+  const [reset, setReset] = useState({ date: addDays(todayStr(), 1), wipe: true });
   const load = useCallback(() => api<{ start: string; users: Row[] }>(`/api/admin/users?today=${today}`).then((r) => { setD(r); setStart(r.start); }), [today]);
   useEffect(() => { load(); }, [load]);
 
@@ -95,6 +96,20 @@ export default function AdminPage() {
             Enregistrer la date
           </button>
           <p className="tiny soft" style={{ margin: 0 }}>Les comptes (email, mot de passe) se modifient en ouvrant la fiche de chaque fille.</p>
+
+          <div style={{ height: 1, background: "rgba(42,11,28,.08)", margin: "8px 0" }} />
+          <div className="serif" style={{ fontSize: 24 }}>Redémarrer le <em>challenge</em> 🔄</div>
+          <p className="small muted" style={{ margin: 0 }}>Choisis le nouveau jour 1. Les comptes, objectifs, posts normaux, photos glow-up et body journals sont gardés.</p>
+          <input className="input" type="date" value={reset.date} onChange={(e) => setReset({ ...reset, date: e.target.value })} aria-label="Nouveau jour 1" />
+          <label className="row small" style={{ gap: 10, fontWeight: 600, alignItems: "flex-start" }}>
+            <input type="checkbox" checked={reset.wipe} onChange={(e) => setReset({ ...reset, wipe: e.target.checked })} style={{ width: 20, height: 20, accentColor: "var(--hot)", flex: "none" }} />
+            <span>Effacer les données de test d&apos;avant cette date (coches, humeurs, eau, roues, punitions, preuves photo, posts « journée validée »)</span>
+          </label>
+          <button className="btn block" style={{ background: "var(--ink)" }} onClick={async () => {
+            if (!confirm(`Jour 1 = ${frDate(reset.date)}${reset.wipe ? "\nLes données de test d'avant seront effacées définitivement." : ""}\nOn y va ?`)) return;
+            try { await api("/api/admin/reset", { body: { start_date: reset.date, wipe: reset.wipe } }); toast("Challenge redémarré 🎀 Jour 1 = " + frDate(reset.date, { day: "numeric", month: "long" })); load(); }
+            catch (e) { toast((e as Error).message); }
+          }}>Redémarrer le challenge</button>
         </div>
       )}
     </main>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { guard, bad } from "@/lib/auth";
-import { one, publicUser, type UserRow } from "@/lib/db";
+import { all, one, publicUser, type UserRow } from "@/lib/db";
 import { isValidDate } from "@/lib/dates";
 import { progressFor } from "@/lib/progress";
 import { loadPosts } from "@/lib/feed";
@@ -19,9 +19,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     void _e; void _m;
     const p = await progressFor(id, today);
     const posts = await loadPosts({ userId: id, limit: 20 });
+    const proofs = await all<{ id: number; date: string; mission_id: number }>(
+      "SELECT id, date, mission_id FROM check_photos WHERE user_id = ? AND date >= ? ORDER BY date DESC, id DESC LIMIT 60", [id, p.start]);
     return NextResponse.json({
       user, goals: p.goals, stats: { ...p.stats, byDate: p.stats.byDate }, tier: p.tier,
       badges: p.badges, start: p.start, posts,
+      proofs: proofs.map((x) => ({ id: Number(x.id), date: x.date, mission: Number(x.mission_id) })),
     });
   });
 }

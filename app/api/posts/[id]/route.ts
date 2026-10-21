@@ -13,6 +13,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     if (r.rowsAffected) {
       await run("DELETE FROM reactions WHERE post_id = ?", [id]);
       await run("DELETE FROM comments WHERE post_id = ?", [id]);
+      await run("DELETE FROM post_media WHERE post_id = ?", [id]);
     }
     return NextResponse.json({ ok: true });
   });

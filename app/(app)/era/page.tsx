@@ -4,8 +4,6 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import TopBar from "@/components/TopBar";
 import DayPanel from "@/components/DayPanel";
-import Sheet from "@/components/Sheet";
-import Wheel from "@/components/Wheel";
 import { HeroHeart } from "@/components/three";
 import { useApp } from "@/components/AppContext";
 import { api } from "@/lib/client";
@@ -15,10 +13,13 @@ export default function EraPage() {
   const { me, start } = useApp();
   const today = todayStr();
   const n = dayNumber(start, today);
-  const [missed, setMissed] = useState<{ missedYesterday: boolean; yesterday: string; stats: { streak: number } } | null>(null);
-  const [wheel, setWheel] = useState(false);
-  const load = useCallback(() => api(`/api/progress?today=${today}`).then(setMissed), [today]);
-  useEffect(() => { load(); }, [load]);
+  const [owed, setOwed] = useState<{ postId: number; text: string }[]>([]);
+  const load = useCallback(() => api<{ owed: { postId: number; text: string }[] }>(`/api/wheel?today=${today}`).then((d) => setOwed(d.owed)).catch(() => {}), [today]);
+  useEffect(() => {
+    load();
+    window.addEventListener("club75-wheel", load);
+    return () => window.removeEventListener("club75-wheel", load);
+  }, [load]);
 
   return (
     <main className="page">
@@ -27,13 +28,15 @@ export default function EraPage() {
       <h1 className="title">My <em>era</em></h1>
       {me.era && <p className="serif muted" style={{ fontSize: 19, margin: "6px 0 0", fontStyle: "italic" }}>Current era : {me.era}</p>}
 
-      {missed?.missedYesterday && n > 1 && n <= 76 && (
-        <motion.button className="dark row" onClick={() => setWheel(true)} initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-          style={{ marginTop: 18, padding: 14, gap: 12, width: "100%", border: 0, textAlign: "left" }}>
-          <span style={{ fontSize: 30 }}>🎡</span>
-          <span style={{ flex: 1 }}><b>Hier n&apos;était pas complet…</b><br /><span className="small" style={{ opacity: 0.8 }}>La roue des conséquences t&apos;attend. Il y a des Free Pass 🤞</span></span>
-        </motion.button>
-      )}
+      {owed.map((o, i) => (
+        <motion.div key={o.postId} initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: i * 0.08 }}>
+          <Link href={`/tea#post-${o.postId}`} className="dark row" style={{ marginTop: 14, padding: 14, gap: 12, textDecoration: "none" }}>
+            <motion.span animate={{ rotate: [0, -12, 12, 0] }} transition={{ repeat: Infinity, duration: 1.6, repeatDelay: 1.2 }} style={{ fontSize: 30 }}>⚖️</motion.span>
+            <span style={{ flex: 1 }}><b>Punition en attente</b><br /><span className="small" style={{ opacity: 0.8 }}>{o.text.replace(/^a tourné la roue 🎡 : /, "")} · poste ta preuve dans le Tea</span></span>
+            <span className="pill" style={{ background: "var(--cherry-grad)", color: "#fff" }}>Prouver</span>
+          </Link>
+        </motion.div>
+      ))}
 
       {n < 1 ? (
         <div style={{ textAlign: "center" }}>
@@ -53,11 +56,6 @@ export default function EraPage() {
         <div style={{ marginTop: 8 }}><DayPanel date={today} dayNum={n} onChange={load} /></div>
       )}
 
-      <Sheet open={wheel} onClose={() => { setWheel(false); load(); }}>
-        <h2 className="h2" style={{ textAlign: "center" }}>The consequence <em>wheel</em></h2>
-        <p className="small muted" style={{ textAlign: "center", marginTop: -4 }}>Des conséquences mignonnes, jamais méchantes. Le résultat part dans le Tea.</p>
-        {missed && <Wheel date={missed.yesterday} />}
-      </Sheet>
     </main>
   );
 }
