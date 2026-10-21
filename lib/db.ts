@@ -9,8 +9,10 @@ let client: Client | null = null;
 let ready: Promise<void> | null = null;
 
 function makeClient(): Client {
-  const url = process.env.TURSO_DATABASE_URL;
-  if (url) return createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
+  // CLUB_DB_* first: the Vercel Turso integration rewrites TURSO_* for every deployment
+  const url = process.env.CLUB_DB_URL || process.env.TURSO_DATABASE_URL;
+  const authToken = process.env.CLUB_DB_URL ? process.env.CLUB_DB_TOKEN : process.env.TURSO_AUTH_TOKEN;
+  if (url) return createClient({ url, authToken });
   if (process.env.VERCEL) throw new Error("TURSO_DATABASE_URL manquant : configure une base Turso dans Vercel.");
   const dir = path.join(process.cwd(), "data");
   fs.mkdirSync(dir, { recursive: true });
